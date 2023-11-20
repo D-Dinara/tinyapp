@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/D-Dinara/tinyapp/issues"
   },
-  "homepage": "https://github.com/D-Dinara/tinyapp#readme"
+  "homepage": "https://github.com/D-Dinara/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
 }
