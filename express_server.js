@@ -9,11 +9,12 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 
 // a function that returns a string of 6 random alphanumeric characters
-// in order to simulate generating a "unique" Short URL id
+// implemeneted in order to simulate generating a "unique" Short URL id
 const generateRandomString = () => {
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let randomString = '';
 
+  // iterate through the string and pick 6 random characters
   for (let i = 0; i < 6; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
     randomString += characters.charAt(randomIndex);
@@ -21,6 +22,7 @@ const generateRandomString = () => {
   return randomString;
 };
 
+// an object to keep track of all the URLs and their shortened forms
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -34,32 +36,37 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+// render information about all URLs and their shortened forms
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
+// render a page to create new short URLs
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+// the id-longURL key-value pair are saved to the urlDatabase when a POST request to /urls is received
 app.post("/urls", (req, res) => {
   const id = generateRandomString();
   urlDatabase[id] = req.body.longURL;
   res.redirect(`/urls/${id}`);
 });
 
+// render information about a single URL and its shortened form
 app.get("/urls/:id", (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
   res.render("urls_show", templateVars);
 });
 
+// any request to "/u/:id" is redirected to its longURL
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id];
   if (longURL) {
     res.redirect(longURL);
   } else {
-    // Handle the case where the short URL does not exist in the database
+    // handle the case where the short URL does not exist in the database
     res.send("Short URL not found");
   }
 });
