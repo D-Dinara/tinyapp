@@ -1,6 +1,6 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
-const generateRandomString = require('./helpers/generateRandonString');
+const generateRandomString = require('./helpers/generateRandomString');
 const app = express();
 const PORT = 8080; // default port 8080
 
