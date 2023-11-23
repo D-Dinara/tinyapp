@@ -29,6 +29,9 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+// a global object to store and access the users in the app
+const users = {};
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -41,7 +44,7 @@ app.get("/urls.json", (req, res) => {
 app.get("/urls", (req, res) => {
   const templateVars = {
     urls: urlDatabase,
-    username: req.cookies["username"]
+    user: users[req.cookies["user_id"]]
   };
   res.render("urls_index", templateVars);
 });
@@ -49,7 +52,7 @@ app.get("/urls", (req, res) => {
 // render a page to create new short URLs
 app.get("/urls/new", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"]
+    user: users[req.cookies["user_id"]]
   };
   res.render("urls_new", templateVars);
 });
@@ -66,7 +69,7 @@ app.get("/urls/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
     longURL: urlDatabase[req.params.id],
-    username: req.cookies["username"]
+    user: users[req.cookies["user_id"]]
   };
   res.render("urls_show", templateVars);
 });
@@ -100,20 +103,32 @@ app.post("/login", (req, res) => {
   res.redirect("/urls");
 });
 
-// the /logout endpoint clears the username cookie and redirects the user back to the /urls page
+// the /logout endpoint clears the user_id cookie and redirects the user back to the /urls page
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
 // render registration form
 app.get("/register", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"]
+    user: users[req.cookies["user_id"]]
   };
   res.render("user_registration", templateVars);
 });
 
+//a POST route for /register adds new user object to global users object, sets user_id cookie
+app.post("/register", (req, res) => {
+  // generate an id
+  const id = generateRandomString();
+  // get the values from user inputs
+  const { email, password } = req.body;
+  //add new user object
+  users[id] = { id, email, password };
+  // set user_id cookie
+  res.cookie("user_id", id);
+  res.redirect("/urls");
+});
 
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
