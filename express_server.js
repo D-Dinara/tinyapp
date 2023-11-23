@@ -9,6 +9,9 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true })); // convert the request body from a Buffer into string
 app.use(cookieParser());
 
+// a global object to store and access the users in the app
+const users = {};
+
 // a function that returns a string of 6 random alphanumeric characters
 // implemeneted in order to simulate generating a "unique" Short URL id
 const generateRandomString = () => {
@@ -23,14 +26,22 @@ const generateRandomString = () => {
   return randomString;
 };
 
+// The function getUserByEmail takes in a user email and checks if the user exists in the users object
+// It returns the user object or null if the user doesn't exist
+const getUserByEmail = (email) => {
+  for (const userId in users) {
+    if (users[userId].email === email) {
+      return users[userId];
+    }
+  }
+  return null;
+};
+
 // an object to keep track of all the URLs and their shortened forms
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
-
-// a global object to store and access the users in the app
-const users = {};
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -42,34 +53,39 @@ app.get("/urls.json", (req, res) => {
 
 // render information about all URLs and their shortened forms
 app.get("/urls", (req, res) => {
+  const userId = req.cookies["user_id"];
   const templateVars = {
     urls: urlDatabase,
-    user: users[req.cookies["user_id"]]
+    user: users[userId]
   };
   res.render("urls_index", templateVars);
 });
 
 // render a page to create new short URLs
 app.get("/urls/new", (req, res) => {
+  const userId = req.cookies["user_id"];
   const templateVars = {
-    user: users[req.cookies["user_id"]]
+    user: users[userId]
   };
   res.render("urls_new", templateVars);
 });
 
-// the id-longURL key-value pair are saved to the urlDatabase when a POST request to /urls is received
+// POST request to /urls saves the id-longURL key-value pair to the urlDatabase
 app.post("/urls", (req, res) => {
+  // generate short URL id
   const id = generateRandomString();
+  // get user input and save to urlDatabase
   urlDatabase[id] = req.body.longURL;
   res.redirect(`/urls/${id}`);
 });
 
 // render information about a single URL and its shortened form
 app.get("/urls/:id", (req, res) => {
+  const userID = req.cookies["user_id"];
   const templateVars = {
     id: req.params.id,
     longURL: urlDatabase[req.params.id],
-    user: users[req.cookies["user_id"]]
+    user: users[userID]
   };
   res.render("urls_show", templateVars);
 });
@@ -87,7 +103,7 @@ app.get("/u/:id", (req, res) => {
     res.redirect(longURL);
   } else {
     // handle the case where the short URL does not exist in the database
-    res.send("Short URL not found");
+    res.status(404).send("Short URL not found");
   }
 });
 
@@ -111,22 +127,37 @@ app.post("/logout", (req, res) => {
 
 // render registration form
 app.get("/register", (req, res) => {
+  const userId = req.cookies["user_id"];
   const templateVars = {
-    user: users[req.cookies["user_id"]]
+    user: users[userId]
   };
   res.render("user_registration", templateVars);
 });
 
-//a POST route for /register adds new user object to global users object, sets user_id cookie
+// POST route for /register adds new user object to global users object, sets user_id cookie
 app.post("/register", (req, res) => {
-  // generate an id
-  const id = generateRandomString();
-  // get the values from user inputs
+  
+  // get values from user inputs
   const { email, password } = req.body;
-  //add new user object
-  users[id] = { id, email, password };
+
+  // check if email or password is empty
+  if (!email || !password) {
+    return res.status(400).send("Email and password cannot be empty");
+  }
+
+  // check if the email is already registered
+  if (getUserByEmail(email)) {
+    return res.status(400).send("Email already registered");
+  }
+  
+  // generate user id
+  const userId = generateRandomString();
+
+  // add new user object
+  users[userId] = { userId, email, password };
+
   // set user_id cookie
-  res.cookie("user_id", id);
+  res.cookie("user_id", userId);
   res.redirect("/urls");
 });
 
