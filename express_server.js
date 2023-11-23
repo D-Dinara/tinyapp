@@ -17,7 +17,6 @@ const users = {};
 const generateRandomString = () => {
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let randomString = '';
-
   // iterate through the string and pick 6 random characters
   for (let i = 0; i < 6; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
@@ -113,16 +112,36 @@ app.post("/urls/:id/delete", (req, res) => {
   res.redirect("/urls");
 });
 
-// set a cookie named username to the value submitted in the request body via the login form
+// set a cookie user_id to the value submitted in the request body via the login form
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
+  // get values from user inputs
+  const { email, password } = req.body;
+
+  // check if email or password is empty
+  if (!email || !password) {
+    return res.status(400).send("Email and password cannot be empty");
+  }
+
+  const user = getUserByEmail(email); // find user in the users object
+  // check if user exists
+  if (!user) {
+    return res.status(403).send("Email is not registered");
+  } else {
+    // check if the password match
+    if (password !== user.password) {
+      return res.status(403).send("Password is invalid");
+    }
+    // set user_id cookie
+    res.cookie("user_id", user.userId);
+  }
+  
   res.redirect("/urls");
 });
 
 // the /logout endpoint clears the user_id cookie and redirects the user back to the /urls page
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 // render registration form
@@ -170,9 +189,6 @@ app.get("/login", (req, res) => {
   res.render("user_login", templateVars);
 });
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
