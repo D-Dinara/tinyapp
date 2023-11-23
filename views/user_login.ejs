@@ -15,15 +15,15 @@
       crossorigin="anonymous"
     />
 
-    <title>User Register - TinyApp Example</title>
+    <title>User Login - TinyApp Example</title>
   </head>
 
   <body>
     <%- include('partials/_header') %>
 
     <main style="margin: 1em;">
-      <h3 class="mb-3">Create Account</h3>
-      <form class="form-signin" action="/register" method="POST">
+      <h3 class="mb-3">Login</h3>
+      <form class="form-signin" action="/login" method="POST">
         <div class="form-group">
           <label for="email">Email address</label>
           <input
@@ -42,7 +42,7 @@
             style="width: 300px;"
           />
         </div>
-        <button type="submit" class="btn btn-primary">Register</button>
+        <button type="submit" class="btn btn-primary">Login</button>
       </form>
     </main>
     <!-- Bootstrap JS -->

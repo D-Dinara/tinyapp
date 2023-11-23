@@ -161,6 +161,15 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
+// render login form
+app.get("/login", (req, res) => {
+  const userId = req.cookies["user_id"];
+  const templateVars = {
+    user: users[userId]
+  };
+  res.render("user_login", templateVars);
+});
+
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
