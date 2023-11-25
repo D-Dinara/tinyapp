@@ -25,9 +25,16 @@ const getUserByEmail = (email) => {
 };
 
 // an object to keep track of all the URLs and their shortened forms
+
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
 
 app.get("/", (req, res) => {
@@ -72,7 +79,10 @@ app.post("/urls", (req, res) => {
     // generate short URL id
     const id = generateRandomString();
     // get user input and save to urlDatabase
-    urlDatabase[id] = req.body.longURL;
+    urlDatabase[id] = {
+      longURL: req.body.longURL,
+      userID: userId
+    };
     res.redirect(`/urls/${id}`);
     // if not logged in show a message
   } else {
@@ -85,7 +95,7 @@ app.get("/urls/:id", (req, res) => {
   const userID = req.cookies["user_id"];
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     user: users[userID]
   };
   res.render("urls_show", templateVars);
@@ -93,13 +103,13 @@ app.get("/urls/:id", (req, res) => {
 
 // a route that updates a URL resource
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id] = req.body.longURL;
+  urlDatabase[req.params.id].longURL = req.body.longURL;
   res.redirect("/urls");
 });
 
 // any request to "/u/:id" is redirected to its longURL
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
+  const longURL = urlDatabase[req.params.id].longURL;
   if (longURL) {
     res.redirect(longURL);
   } else {
