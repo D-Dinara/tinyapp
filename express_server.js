@@ -24,6 +24,18 @@ const getUserByEmail = (email) => {
   return null;
 };
 
+// an object to keep track of all the URLs and their shortened forms
+const urlDatabase = {
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
+};
+
 // the function urlsForUser takes in a user ID and returns URLs from the urlDatabase that belong to this user
 const urlsForUser = (id) => {
   const URLs = {};
@@ -36,18 +48,6 @@ const urlsForUser = (id) => {
     }
   }
   return URLs;
-};
-
-// an object to keep track of all the URLs and their shortened forms
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW",
-  },
 };
 
 app.get("/", (req, res) => {
@@ -116,12 +116,19 @@ app.post("/urls", (req, res) => {
 // render information about a single URL and its shortened form
 app.get("/urls/:id", (req, res) => {
   const userID = req.cookies["user_id"];
-  const templateVars = {
-    id: req.params.id,
-    longURL: urlDatabase[req.params.id].longURL,
-    user: users[userID]
-  };
-  res.render("urls_show", templateVars);
+  // store URLs for this user in urls
+  const urls = urlsForUser(userID);
+  // check if user is logged in and the short URL belongs to this user
+  if (users[userID] && urls[req.params.id]) {
+    const templateVars = {
+      id: req.params.id,
+      longURL: urls[req.params.id].longURL,
+      user: users[userID]
+    };
+    res.render("urls_show", templateVars);
+  } else {
+    res.status(403).send("You don't have permission to access this page");
+  }
 });
 
 // a route that updates a URL resource
