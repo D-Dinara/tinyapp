@@ -24,6 +24,20 @@ const getUserByEmail = (email) => {
   return null;
 };
 
+// the function urlsForUser takes in a user ID and returns URLs from the urlDatabase that belong to this user
+const urlsForUser = (id) => {
+  const URLs = {};
+  // iterate through the urlDatabase keys
+  for (const urlID in urlDatabase) {
+    // check if id matches userID in the database
+    if (id === urlDatabase[urlID].userID) {
+      // store user's URLs in the URLs object
+      URLs[urlID] = urlDatabase[urlID];
+    }
+  }
+  return URLs;
+};
+
 // an object to keep track of all the URLs and their shortened forms
 const urlDatabase = {
   b6UTxQ: {
@@ -44,13 +58,14 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-// render information about all URLs and their shortened forms
+// render information about user's URLs and their shortened forms
 app.get("/urls", (req, res) => {
   const userID = req.cookies["user_id"];
   // check if user is logged in
   if (users[userID]) {
     const templateVars = {
-      urls: urlDatabase,
+      // show only the user's urls
+      urls: urlsForUser(userID),
       user: users[userID]
     };
     res.render("urls_index", templateVars);
