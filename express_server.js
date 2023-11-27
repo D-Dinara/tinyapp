@@ -16,16 +16,15 @@ const users = {};
 // The function getUserByEmail takes in a user email and checks if the user exists in the users object
 // It returns the user object or null if the user doesn't exist
 const getUserByEmail = (email) => {
-  for (const userId in users) {
-    if (users[userId].email === email) {
-      return users[userId];
+  for (const userID in users) {
+    if (users[userID].email === email) {
+      return users[userID];
     }
   }
   return null;
 };
 
 // an object to keep track of all the URLs and their shortened forms
-
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
@@ -47,23 +46,32 @@ app.get("/urls.json", (req, res) => {
 
 // render information about all URLs and their shortened forms
 app.get("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
-  const templateVars = {
-    urls: urlDatabase,
-    user: users[userId]
-  };
-  res.render("urls_index", templateVars);
+  const userID = req.cookies["user_id"];
+  // check if user is logged in
+  if (users[userID]) {
+    const templateVars = {
+      urls: urlDatabase,
+      user: users[userID]
+    };
+    res.render("urls_index", templateVars);
+    // if not logged in show the page with an error message
+  } else {
+    const templateVars = {
+      user: null
+    };
+    res.status(404).render("urls_error", templateVars);
+  }
 });
 
 // render a page to create new short URLs
 app.get("/urls/new", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userID = req.cookies["user_id"];
   const templateVars = {
-    user: users[userId]
+    user: users[userID]
   };
   // check if user is logged in
   // if logged in show the page to create a new short URL
-  if (users[userId]) {
+  if (users[userID]) {
     res.render("urls_new", templateVars);
     // if not logged in show the login form
   } else {
@@ -73,15 +81,15 @@ app.get("/urls/new", (req, res) => {
 
 // POST request to /urls saves the id-longURL key-value pair to the urlDatabase
 app.post("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userID = req.cookies["user_id"];
   // check if user is logged in
-  if (users[userId]) {
+  if (users[userID]) {
     // generate short URL id
     const id = generateRandomString();
     // get user input and save to urlDatabase
     urlDatabase[id] = {
       longURL: req.body.longURL,
-      userID: userId
+      userID
     };
     res.redirect(`/urls/${id}`);
     // if not logged in show a message
@@ -144,7 +152,7 @@ app.post("/login", (req, res) => {
       return res.status(403).send("Password is invalid\n");
     }
     // set user_id cookie
-    res.cookie("user_id", user.userId);
+    res.cookie("user_id", user.userID);
   }
   
   res.redirect("/urls");
@@ -158,12 +166,12 @@ app.post("/logout", (req, res) => {
 
 // render registration form
 app.get("/register", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userID = req.cookies["user_id"];
   const templateVars = {
-    user: users[userId]
+    user: users[userID]
   };
   // check if user is logged in
-  if (users[userId]) {
+  if (users[userID]) {
     res.redirect("/urls");
     // if not logged in show the registration form
   } else {
@@ -188,24 +196,24 @@ app.post("/register", (req, res) => {
   }
   
   // generate user id
-  const userId = generateRandomString();
+  const userID = generateRandomString();
 
   // add new user object
-  users[userId] = { userId, email, password };
+  users[userID] = { userID, email, password };
 
   // set user_id cookie
-  res.cookie("user_id", userId);
+  res.cookie("user_id", userID);
   res.redirect("/urls");
 });
 
 // render login form
 app.get("/login", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userID = req.cookies["user_id"];
   const templateVars = {
-    user: users[userId]
+    user: users[userID]
   };
   // check if user is logged in
-  if (users[userId]) {
+  if (users[userID]) {
     res.redirect("/urls");
     // if not logged in show the login form
   } else {
