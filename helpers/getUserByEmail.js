@@ -2,6 +2,7 @@
 // It returns the user object or null if the user doesn't exist
 const getUserByEmail = (email, database) => {
   for (const userID in database) {
+    // compare emails
     if (database[userID].email === email) {
       return database[userID];
     }

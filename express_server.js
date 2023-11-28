@@ -10,13 +10,13 @@ const PORT = 8080; // default port 8080
 // Set ejs as the view engine
 app.set("view engine", "ejs");
 
+app.use(express.urlencoded({ extended: true })); // convert the request body from a Buffer into string
+
 // use cokkie-session middleware to encrypt cookies
 app.use(cookieSession({
   name: 'session',
   keys: ["somelongsecretkey987654321"],
 }));
-
-app.use(express.urlencoded({ extended: true })); // convert the request body from a Buffer into string
 
 // a global object to store and access the users in the app
 const users = {};
