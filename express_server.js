@@ -7,8 +7,8 @@ const PORT = 8080; // default port 8080
 // Set ejs as the view engine
 app.set("view engine", "ejs");
 
-app.use(express.urlencoded({ extended: true })); // convert the request body from a Buffer into string
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true })); // convert the request body from a Buffer into string
 
 // a global object to store and access the users in the app
 const users = {};
@@ -24,7 +24,7 @@ const getUserByEmail = (email) => {
   return null;
 };
 
-// an object to keep track of all the URLs and their shortened forms
+// an object to keep track of all the URLs and their shortened forms.
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
@@ -74,7 +74,7 @@ app.get("/urls", (req, res) => {
     const templateVars = {
       user: null
     };
-    res.status(404).render("urls_error", templateVars);
+    res.status(403).render("urls_error", templateVars);
   }
 });
 
@@ -116,7 +116,7 @@ app.post("/urls", (req, res) => {
 // render information about a single URL and its shortened form
 app.get("/urls/:id", (req, res) => {
   const userID = req.cookies["user_id"];
-  // store URLs for this user in urls
+  // store URLs for this user in urls object
   const urls = urlsForUser(userID);
   // check if user is logged in and the short URL belongs to this user
   if (users[userID] && urls[req.params.id]) {
@@ -127,14 +127,33 @@ app.get("/urls/:id", (req, res) => {
     };
     res.render("urls_show", templateVars);
   } else {
-    res.status(403).send("You don't have permission to access this page");
+    res.status(403).send("You don't have permission to access this page\n");
   }
 });
 
 // a route that updates a URL resource
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id].longURL = req.body.longURL;
-  res.redirect("/urls");
+  const userID = req.cookies["user_id"];
+  // store URLs for this user in urls object
+  const urls = urlsForUser(userID);
+  // check if user is logged in and the short URL belongs to this user
+  if (users[userID] && urls[req.params.id]) {
+    urls[req.params.id].longURL = req.body.longURL;
+    res.redirect("/urls");
+
+    // send a relevant error message if the user is not logged in
+  } else if (!users[userID]) {
+    res.status(403).send("You need to login or register to access this page\n");
+
+    // check if the url exists in the global database
+    // send a relevant error message if the user does not own the URL
+  } else if (urlDatabase[req.params.id]) {
+    res.status(403).send("You don't have permission to edit this URL\n");
+
+    // send a relevant error message if short URL does not exist
+  } else {
+    res.status(404).send("The URL does not exist\n");
+  }
 });
 
 // any request to "/u/:id" is redirected to its longURL
