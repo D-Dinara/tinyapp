@@ -19,12 +19,12 @@ app.use(express.urlencoded({ extended: true })); // convert the request body fro
 // a global object to store and access the users in the app
 const users = {};
 
-// The function getUserByEmail takes in a user email and checks if the user exists in the users object
+// The function getUserByEmail takes in a user email and users database and checks if the user exists in the database
 // It returns the user object or null if the user doesn't exist
-const getUserByEmail = (email) => {
-  for (const userID in users) {
-    if (users[userID].email === email) {
-      return users[userID];
+const getUserByEmail = (email, database) => {
+  for (const userID in database) {
+    if (database[userID].email === email) {
+      return database[userID];
     }
   }
   return null;
@@ -223,7 +223,7 @@ app.post("/login", (req, res) => {
     return res.status(400).send("Email and password cannot be empty\n");
   }
 
-  const user = getUserByEmail(email); // find user in the users object
+  const user = getUserByEmail(email, users); // find user in the users object
   // check if user exists
   if (!user) {
     return res.status(403).send("Email is not registered\n");
@@ -273,7 +273,7 @@ app.post("/register", (req, res) => {
   }
 
   // check if the email is already registered
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, users)) {
     return res.status(400).send("Email already registered\n");
   }
   
