@@ -1,5 +1,6 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
+const bcrypt = require("bcryptjs");
 const generateRandomString = require('./helpers/generateRandomString');
 const app = express();
 const PORT = 8080; // default port 8080
@@ -192,6 +193,21 @@ app.post("/urls/:id/delete", (req, res) => {
   }
 });
 
+// render login form
+app.get("/login", (req, res) => {
+  const userID = req.cookies["user_id"];
+  const templateVars = {
+    user: users[userID]
+  };
+  // check if user is logged in
+  if (users[userID]) {
+    res.redirect("/urls");
+    // if not logged in show the login form
+  } else {
+    res.render("user_login", templateVars);
+  }
+});
+
 // set a cookie user_id to the value submitted in the request body via the login form
 app.post("/login", (req, res) => {
   // get values from user inputs
@@ -208,7 +224,7 @@ app.post("/login", (req, res) => {
     return res.status(403).send("Email is not registered\n");
   } else {
     // check if the password match
-    if (password !== user.password) {
+    if (!bcrypt.compareSync(password, user.password)) {
       return res.status(403).send("Password is invalid\n");
     }
     // set user_id cookie
@@ -244,6 +260,7 @@ app.post("/register", (req, res) => {
   
   // get values from user inputs
   const { email, password } = req.body;
+  const hashedPassword = bcrypt.hashSync(password, 10);
 
   // check if email or password is empty
   if (!email || !password) {
@@ -259,26 +276,12 @@ app.post("/register", (req, res) => {
   const userID = generateRandomString();
 
   // add new user object
-  users[userID] = { userID, email, password };
+  users[userID] = { userID, email, password: hashedPassword };
+  console.log(users);
 
   // set user_id cookie
   res.cookie("user_id", userID);
   res.redirect("/urls");
-});
-
-// render login form
-app.get("/login", (req, res) => {
-  const userID = req.cookies["user_id"];
-  const templateVars = {
-    user: users[userID]
-  };
-  // check if user is logged in
-  if (users[userID]) {
-    res.redirect("/urls");
-    // if not logged in show the login form
-  } else {
-    res.render("user_login", templateVars);
-  }
 });
 
 
