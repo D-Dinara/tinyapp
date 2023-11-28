@@ -1,5 +1,5 @@
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
 const generateRandomString = require('./helpers/generateRandomString');
 const app = express();
@@ -8,7 +8,12 @@ const PORT = 8080; // default port 8080
 // Set ejs as the view engine
 app.set("view engine", "ejs");
 
-app.use(cookieParser());
+// use cokkie-session middleware to encrypt cookies
+app.use(cookieSession({
+  name: 'session',
+  keys: ["somelongsecretkey987654321"],
+}));
+
 app.use(express.urlencoded({ extended: true })); // convert the request body from a Buffer into string
 
 // a global object to store and access the users in the app
@@ -61,7 +66,7 @@ app.get("/urls.json", (req, res) => {
 
 // render information about user's URLs and their shortened forms
 app.get("/urls", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   // check if user is logged in
   if (users[userID]) {
     const templateVars = {
@@ -81,7 +86,7 @@ app.get("/urls", (req, res) => {
 
 // render a page to create new short URLs
 app.get("/urls/new", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   const templateVars = {
     user: users[userID]
   };
@@ -97,7 +102,7 @@ app.get("/urls/new", (req, res) => {
 
 // POST request to /urls saves the id-longURL key-value pair to the urlDatabase
 app.post("/urls", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   // check if user is logged in
   if (users[userID]) {
     // generate short URL id
@@ -116,7 +121,7 @@ app.post("/urls", (req, res) => {
 
 // render information about a single URL and its shortened form
 app.get("/urls/:id", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   // store URLs for this user in urls object
   const urls = urlsForUser(userID);
   // check if user is logged in and the short URL belongs to this user
@@ -134,7 +139,7 @@ app.get("/urls/:id", (req, res) => {
 
 // a route that updates a URL resource
 app.post("/urls/:id", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   // store URLs for this user in urls object
   const urls = urlsForUser(userID);
   // check if user is logged in and the short URL belongs to this user
@@ -170,7 +175,7 @@ app.get("/u/:id", (req, res) => {
 
 // add POST route to remove URLs
 app.post("/urls/:id/delete", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   // store URLs for this user in urls object
   const urls = urlsForUser(userID);
   // check if user is logged in and the short URL belongs to this user
@@ -195,7 +200,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 // render login form
 app.get("/login", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   const templateVars = {
     user: users[userID]
   };
@@ -228,7 +233,7 @@ app.post("/login", (req, res) => {
       return res.status(403).send("Password is invalid\n");
     }
     // set user_id cookie
-    res.cookie("user_id", user.userID);
+    req.session.user_id = user.userID;
   }
   
   res.redirect("/urls");
@@ -236,13 +241,13 @@ app.post("/login", (req, res) => {
 
 // the /logout endpoint clears the user_id cookie and redirects the user back to the /urls page
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/login");
 });
 
 // render registration form
 app.get("/register", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   const templateVars = {
     user: users[userID]
   };
@@ -277,10 +282,9 @@ app.post("/register", (req, res) => {
 
   // add new user object
   users[userID] = { userID, email, password: hashedPassword };
-  console.log(users);
 
   // set user_id cookie
-  res.cookie("user_id", userID);
+  req.session.user_id = userID;
   res.redirect("/urls");
 });
 
