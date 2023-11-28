@@ -2,6 +2,8 @@ const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
 const generateRandomString = require('./helpers/generateRandomString');
+const getUserByEmail = require('./helpers/getUserByEmail');
+const urlsForUser =  require('./helpers/urlsForUser');
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -19,17 +21,6 @@ app.use(express.urlencoded({ extended: true })); // convert the request body fro
 // a global object to store and access the users in the app
 const users = {};
 
-// The function getUserByEmail takes in a user email and users database and checks if the user exists in the database
-// It returns the user object or null if the user doesn't exist
-const getUserByEmail = (email, database) => {
-  for (const userID in database) {
-    if (database[userID].email === email) {
-      return database[userID];
-    }
-  }
-  return null;
-};
-
 // an object to keep track of all the URLs and their shortened forms.
 const urlDatabase = {
   b6UTxQ: {
@@ -40,20 +31,6 @@ const urlDatabase = {
     longURL: "https://www.google.ca",
     userID: "aJ48lW",
   },
-};
-
-// the function urlsForUser takes in a user ID and returns URLs from the urlDatabase that belong to this user
-const urlsForUser = (id) => {
-  const URLs = {};
-  // iterate through the urlDatabase keys
-  for (const urlID in urlDatabase) {
-    // check if id matches userID in the database
-    if (id === urlDatabase[urlID].userID) {
-      // store user's URLs in the URLs object
-      URLs[urlID] = urlDatabase[urlID];
-    }
-  }
-  return URLs;
 };
 
 app.get("/", (req, res) => {
@@ -68,10 +45,10 @@ app.get("/urls.json", (req, res) => {
 app.get("/urls", (req, res) => {
   const userID = req.session.user_id;
   // check if user is logged in
-  if (users[userID]) {
+  if (userID) {
     const templateVars = {
       // show only the user's urls
-      urls: urlsForUser(userID),
+      urls: urlsForUser(userID, urlDatabase),
       user: users[userID]
     };
     res.render("urls_index", templateVars);
@@ -92,7 +69,7 @@ app.get("/urls/new", (req, res) => {
   };
   // check if user is logged in
   // if logged in show the page to create a new short URL
-  if (users[userID]) {
+  if (userID) {
     res.render("urls_new", templateVars);
     // if not logged in show the login form
   } else {
@@ -104,7 +81,7 @@ app.get("/urls/new", (req, res) => {
 app.post("/urls", (req, res) => {
   const userID = req.session.user_id;
   // check if user is logged in
-  if (users[userID]) {
+  if (userID) {
     // generate short URL id
     const id = generateRandomString();
     // get user input and save to urlDatabase
@@ -115,7 +92,7 @@ app.post("/urls", (req, res) => {
     res.redirect(`/urls/${id}`);
     // if not logged in show a message
   } else {
-    res.status(403).send("You need to login to be able to shorten URLs\n");
+    res.status(401).send("You need to login to be able to shorten URLs\n");
   }
 });
 
@@ -123,9 +100,9 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
   // store URLs for this user in urls object
-  const urls = urlsForUser(userID);
+  const urls = urlsForUser(userID, urlDatabase);
   // check if user is logged in and the short URL belongs to this user
-  if (users[userID] && urls[req.params.id]) {
+  if (userID && urls[req.params.id]) {
     const templateVars = {
       id: req.params.id,
       longURL: urls[req.params.id].longURL,
@@ -133,7 +110,7 @@ app.get("/urls/:id", (req, res) => {
     };
     res.render("urls_show", templateVars);
   } else {
-    res.status(403).send("You don't have permission to access this page\n");
+    res.status(401).send("You don't have permission to access this page\n");
   }
 });
 
@@ -141,25 +118,26 @@ app.get("/urls/:id", (req, res) => {
 app.post("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
   // store URLs for this user in urls object
-  const urls = urlsForUser(userID);
-  // check if user is logged in and the short URL belongs to this user
-  if (users[userID] && urls[req.params.id]) {
-    urls[req.params.id].longURL = req.body.longURL;
-    res.redirect("/urls");
+  const urls = urlsForUser(userID, urlDatabase);
 
-    // send a relevant error message if the user is not logged in
-  } else if (!users[userID]) {
-    res.status(403).send("You need to login or register to access this page\n");
-
-    // check if the url exists in the global database
-    // send a relevant error message if the user does not own the URL
-  } else if (urlDatabase[req.params.id]) {
-    res.status(403).send("You don't have permission to edit this URL\n");
-
-    // send a relevant error message if short URL does not exist
-  } else {
-    res.status(404).send("The URL does not exist\n");
+  // check if user is logged in
+  if (!userID) {
+    return res.status(403).send("You need to login or register to access this page\n");
   }
+
+  // check if the url exists in the global database
+  if (!urlDatabase[req.params.id]) {
+    return res.status(404).send("The URL does not exist\n");
+  }
+
+  // check if the short URL belongs to this user
+  if (!urls[req.params.id]) {
+    return res.status(403).send("You don't have permission to edit this URL\n");
+  }
+
+  // update the long URL
+  urls[req.params.id].longURL = req.body.longURL;
+  res.redirect("/urls");
 });
 
 // any request to "/u/:id" is redirected to its longURL
@@ -177,26 +155,27 @@ app.get("/u/:id", (req, res) => {
 app.post("/urls/:id/delete", (req, res) => {
   const userID = req.session.user_id;
   // store URLs for this user in urls object
-  const urls = urlsForUser(userID);
-  // check if user is logged in and the short URL belongs to this user
-  if (users[userID] && urls[req.params.id]) {
-    delete urlDatabase[req.params.id];
-    res.redirect("/urls");
+  const urls = urlsForUser(userID, urlDatabase);
 
-    // send a relevant error message if the user is not logged in
-  } else if (!users[userID]) {
-    res.status(403).send("You need to login or register to access this page\n");
-
-    // check if the url exists in the global database
-    // send a relevant error message if the user does not own the URL
-  } else if (urlDatabase[req.params.id]) {
-    res.status(403).send("You don't have permission to delete this URL\n");
-
-    // send a relevant error message if short URL does not exist
-  } else {
-    res.status(404).send("The URL does not exist\n");
+  // check if user is logged in
+  if (!userID) {
+    return res.status(403).send("You need to be logged in to perform this action\n");
   }
+
+  // check if the url exists in the global database
+  if (!urlDatabase[req.params.id]) {
+    return res.status(404).send("The URL does not exist\n");
+  }
+
+  // check if the short URL belongs to this user
+  if (!urls[req.params.id]) {
+    return res.status(403).send("You don't have permission to delete this URL\n");
+  }
+  // delete the url
+  delete urlDatabase[req.params.id];
+  res.redirect("/urls");
 });
+
 
 // render login form
 app.get("/login", (req, res) => {
@@ -205,7 +184,7 @@ app.get("/login", (req, res) => {
     user: users[userID]
   };
   // check if user is logged in
-  if (users[userID]) {
+  if (userID) {
     res.redirect("/urls");
     // if not logged in show the login form
   } else {
@@ -220,7 +199,7 @@ app.post("/login", (req, res) => {
 
   // check if email or password is empty
   if (!email || !password) {
-    return res.status(400).send("Email and password cannot be empty\n");
+    return res.status(400).send("Please provide an email AND password\n");
   }
 
   const user = getUserByEmail(email, users); // find user in the users object
@@ -252,7 +231,7 @@ app.get("/register", (req, res) => {
     user: users[userID]
   };
   // check if user is logged in
-  if (users[userID]) {
+  if (userID) {
     res.redirect("/urls");
     // if not logged in show the registration form
   } else {
@@ -287,7 +266,6 @@ app.post("/register", (req, res) => {
   req.session.user_id = userID;
   res.redirect("/urls");
 });
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
