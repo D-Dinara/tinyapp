@@ -169,8 +169,27 @@ app.get("/u/:id", (req, res) => {
 
 // add POST route to remove URLs
 app.post("/urls/:id/delete", (req, res) => {
-  delete urlDatabase[req.params.id];
-  res.redirect("/urls");
+  const userID = req.cookies["user_id"];
+  // store URLs for this user in urls object
+  const urls = urlsForUser(userID);
+  // check if user is logged in and the short URL belongs to this user
+  if (users[userID] && urls[req.params.id]) {
+    delete urlDatabase[req.params.id];
+    res.redirect("/urls");
+
+    // send a relevant error message if the user is not logged in
+  } else if (!users[userID]) {
+    res.status(403).send("You need to login or register to access this page\n");
+
+    // check if the url exists in the global database
+    // send a relevant error message if the user does not own the URL
+  } else if (urlDatabase[req.params.id]) {
+    res.status(403).send("You don't have permission to delete this URL\n");
+
+    // send a relevant error message if short URL does not exist
+  } else {
+    res.status(404).send("The URL does not exist\n");
+  }
 });
 
 // set a cookie user_id to the value submitted in the request body via the login form
