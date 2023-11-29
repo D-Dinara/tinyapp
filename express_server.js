@@ -115,13 +115,13 @@ app.get("/u/:id", (req, res) => {
   let shortUrlDetails = urlDatabase[req.params.id];
   // Check if the short URL exists in the database
   if (!shortUrlDetails) {
-    return res.status(404).send("Short URL not found\n");
+    return res.status(404).send("The URL does not exist\n");
   }
   
   const longURL = shortUrlDetails.longURL;
   // Check if the long URL exists in the database
   if (!longURL) {
-    return res.status(404).send("Long URL not found\n");
+    return res.status(404).send("Long URL does not exist\n");
   }
 
   let visitorID;
