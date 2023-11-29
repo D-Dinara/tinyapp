@@ -30,10 +30,12 @@ const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
     userID: "aJ48lW",
+    visitCount: 0
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
     userID: "aJ48lW",
+    visitCount: 0
   },
 };
 
@@ -69,7 +71,7 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const userID = req.session.user_id;
   const templateVars = {
-    user: users[userID]
+    user: users[userID],
   };
   // check if user is logged in
   // if logged in show the page to create a new short URL
@@ -91,7 +93,8 @@ app.post("/urls", (req, res) => {
     // get user input and save to urlDatabase
     urlDatabase[id] = {
       longURL: req.body.longURL,
-      userID
+      userID,
+      visitCount: 0
     };
     res.redirect(`/urls/${id}`);
     // if not logged in show a message
@@ -110,7 +113,8 @@ app.get("/urls/:id", (req, res) => {
     const templateVars = {
       id: req.params.id,
       longURL: urls[req.params.id].longURL,
-      user: users[userID]
+      user: users[userID],
+      visitCount: urlDatabase[req.params.id].visitCount
     };
     res.render("urls_show", templateVars);
   } else {
@@ -147,6 +151,9 @@ app.put("/urls/:id", (req, res) => {
 // any request to "/u/:id" is redirected to its longURL
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id].longURL;
+  // increment visit count with every get request
+  urlDatabase[req.params.id].visitCount++;
+  // check if url exists
   if (longURL) {
     res.redirect(longURL);
   } else {
