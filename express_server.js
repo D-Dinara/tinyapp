@@ -30,12 +30,14 @@ const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
     userID: "aJ48lW",
-    visitCount: 0
+    visitCount: 0,
+    uniqueVisitors:[]
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
     userID: "aJ48lW",
-    visitCount: 0
+    visitCount: 0,
+    uniqueVisitors:[]
   },
 };
 
@@ -94,7 +96,8 @@ app.post("/urls", (req, res) => {
     urlDatabase[id] = {
       longURL: req.body.longURL,
       userID,
-      visitCount: 0
+      visitCount: 0,
+      uniqueVisitors:[]
     };
     res.redirect(`/urls/${id}`);
     // if not logged in show a message
@@ -114,7 +117,8 @@ app.get("/urls/:id", (req, res) => {
       id: req.params.id,
       longURL: urls[req.params.id].longURL,
       user: users[userID],
-      visitCount: urlDatabase[req.params.id].visitCount
+      visitCount: urlDatabase[req.params.id].visitCount,
+      uniqueVisitors: urlDatabase[req.params.id].uniqueVisitors,
     };
     res.render("urls_show", templateVars);
   } else {
@@ -150,16 +154,35 @@ app.put("/urls/:id", (req, res) => {
 
 // any request to "/u/:id" is redirected to its longURL
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id].longURL;
-  // increment visit count with every get request
-  urlDatabase[req.params.id].visitCount++;
-  // check if url exists
-  if (longURL) {
-    res.redirect(longURL);
-  } else {
-    // handle the case where the short URL does not exist in the database
-    res.status(404).send("Short URL not found\n");
+  let shortURL = urlDatabase[req.params.id];
+  // Check if the short URL exists in the database
+  if (!shortURL) {
+    return res.status(404).send("Short URL not found\n");
   }
+  
+  const longURL = shortURL.longURL;
+  // Check if the long URL exists in the database
+  if (!longURL) {
+    return res.status(404).send("Long URL not found\n");
+  }
+
+  let visitorID;
+  // check if user is logged in or has already visited the URL (cookie was assigned)
+  if (req.session.user_id) {
+    visitorID = req.session.user_id;
+  } else {
+    // if the user is unique, generate an id
+    visitorID = generateRandomString();
+    // set user_id cookie
+    req.session.user_id = visitorID;
+  }
+  // check if the visitor already exists in the uniqueVisitors array
+  if (!shortURL.uniqueVisitors.includes(visitorID)) {
+    shortURL.uniqueVisitors.push(visitorID);
+  }
+
+  shortURL.visitCount++;
+  res.redirect(longURL);
 });
 
 // add POST route to remove URLs
