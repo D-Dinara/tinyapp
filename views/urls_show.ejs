@@ -21,6 +21,15 @@
           <p>Short URL ID: <a href="/u/<%= id %>"><%= id %></a></p>
           <p>The short URL was visited <b><%= visitCount %></b> times</p>
           <p>Number of unique visitors: <b><%= uniqueVisitors.length %></b></p>
+          <h5>Visit history:</h5>
+          <% if (visitHistory.length === 0) { %>
+            <p>The history is empty</p>
+          <% } else { %>
+          <ul style="list-style: none;"><% visitHistory.map((visit) => { %>
+            <li><%= visit.timestamp %> - Visitor ID: <i><%= visit.visitorID %></i></li>
+          <% }) %>
+          </ul>
+        <% } %>
         </div>
       </div>
       <div class="card-footer text-muted text-center">

@@ -30,14 +30,16 @@ const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
     userID: "aJ48lW",
-    visitCount: 0,
-    uniqueVisitors:[]
+    visitCount: 0, // number of visits
+    uniqueVisitors:[], // array of visitors' IDs
+    visitHistory: [] // array of objects { timestamp, visitorID }
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
     userID: "aJ48lW",
-    visitCount: 0,
-    uniqueVisitors:[]
+    visitCount: 0, // number of visits
+    uniqueVisitors:[], // array of strings - visitors' IDs
+    visitHistory: [] // array of objects { timestamp, visitorID }
   },
 };
 
@@ -96,8 +98,9 @@ app.post("/urls", (req, res) => {
     urlDatabase[id] = {
       longURL: req.body.longURL,
       userID,
-      visitCount: 0,
-      uniqueVisitors:[]
+      visitCount: 0, // total number of visits, set to 0 when url is created
+      uniqueVisitors: [], // array of strings, contains visitors' IDs
+      visitHistory: [] // array of objects { timestamp, visitorID }
     };
     res.redirect(`/urls/${id}`);
     // if not logged in show a message
@@ -109,16 +112,18 @@ app.post("/urls", (req, res) => {
 // render information about a single URL and its shortened form
 app.get("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
+  const shortUrlDetails = urlDatabase[req.params.id];
   // store URLs for this user in urls object
   const urls = urlsForUser(userID, urlDatabase);
   // check if user is logged in and the short URL belongs to this user
   if (userID && urls[req.params.id]) {
     const templateVars = {
       id: req.params.id,
-      longURL: urls[req.params.id].longURL,
+      longURL: shortUrlDetails.longURL,
       user: users[userID],
-      visitCount: urlDatabase[req.params.id].visitCount,
-      uniqueVisitors: urlDatabase[req.params.id].uniqueVisitors,
+      visitCount: shortUrlDetails.visitCount,
+      uniqueVisitors: shortUrlDetails.uniqueVisitors,
+      visitHistory: shortUrlDetails.visitHistory,
     };
     res.render("urls_show", templateVars);
   } else {
@@ -129,6 +134,7 @@ app.get("/urls/:id", (req, res) => {
 // a route that updates a URL resource
 app.put("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
+  const shortUrlDetails = urlDatabase[req.params.id];
   // store URLs for this user in urls object
   const urls = urlsForUser(userID, urlDatabase);
 
@@ -138,7 +144,7 @@ app.put("/urls/:id", (req, res) => {
   }
 
   // check if the url exists in the global database
-  if (!urlDatabase[req.params.id]) {
+  if (!shortUrlDetails) {
     return res.status(404).send("The URL does not exist\n");
   }
 
@@ -148,19 +154,19 @@ app.put("/urls/:id", (req, res) => {
   }
 
   // update the long URL
-  urlDatabase[req.params.id].longURL = req.body.longURL;
+  shortUrlDetails.longURL = req.body.longURL;
   res.redirect("/urls");
 });
 
 // any request to "/u/:id" is redirected to its longURL
 app.get("/u/:id", (req, res) => {
-  let shortURL = urlDatabase[req.params.id];
+  let shortUrlDetails = urlDatabase[req.params.id];
   // Check if the short URL exists in the database
-  if (!shortURL) {
+  if (!shortUrlDetails) {
     return res.status(404).send("Short URL not found\n");
   }
   
-  const longURL = shortURL.longURL;
+  const longURL = shortUrlDetails.longURL;
   // Check if the long URL exists in the database
   if (!longURL) {
     return res.status(404).send("Long URL not found\n");
@@ -177,17 +183,26 @@ app.get("/u/:id", (req, res) => {
     req.session.user_id = visitorID;
   }
   // check if the visitor already exists in the uniqueVisitors array
-  if (!shortURL.uniqueVisitors.includes(visitorID)) {
-    shortURL.uniqueVisitors.push(visitorID);
+  if (!shortUrlDetails.uniqueVisitors.includes(visitorID)) {
+    shortUrlDetails.uniqueVisitors.push(visitorID);
   }
+  
+  // Record the visit in the visit history
+  const visit = {
+    visitorID: visitorID,
+    timestamp: new Date().toLocaleString(),
+  };
+  shortUrlDetails.visitHistory.push(visit);
 
-  shortURL.visitCount++;
+  // Increment visit count with every get request
+  shortUrlDetails.visitCount++;
   res.redirect(longURL);
 });
 
 // add POST route to remove URLs
 app.delete("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
+  const shortUrlDetails = urlDatabase[req.params.id];
   // store URLs for this user in urls object
   const urls = urlsForUser(userID, urlDatabase);
 
@@ -197,7 +212,7 @@ app.delete("/urls/:id", (req, res) => {
   }
 
   // check if the url exists in the global database
-  if (!urlDatabase[req.params.id]) {
+  if (!shortUrlDetails) {
     return res.status(404).send("The URL does not exist\n");
   }
 
