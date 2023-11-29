@@ -23,7 +23,7 @@
       </div>
       <div class="card-footer text-muted text-center">
         <h5>Edit</h5>
-        <form class="form-inline" action="/urls/<%= id %>" method="POST">
+        <form class="form-inline" action="/urls/<%= id %>?_method=PUT" method="POST">
           <div class="form-group mb-2 mx-auto">
             <label for="longURL">New URL:</label>
             <input

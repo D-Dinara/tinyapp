@@ -1,6 +1,7 @@
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
+const methodOverride = require('method-override');
 const generateRandomString = require('./helpers/generateRandomString');
 const getUserByEmail = require('./helpers/getUserByEmail');
 const urlsForUser =  require('./helpers/urlsForUser');
@@ -17,6 +18,9 @@ app.use(cookieSession({
   name: 'session',
   keys: ["somelongsecretkey987654321"],
 }));
+
+// override with POST having ?_method=DELETE
+app.use(methodOverride('_method'));
 
 // a global object to store and access the users in the app
 const users = {};
@@ -115,7 +119,7 @@ app.get("/urls/:id", (req, res) => {
 });
 
 // a route that updates a URL resource
-app.post("/urls/:id", (req, res) => {
+app.put("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
   // store URLs for this user in urls object
   const urls = urlsForUser(userID, urlDatabase);
@@ -136,7 +140,7 @@ app.post("/urls/:id", (req, res) => {
   }
 
   // update the long URL
-  urls[req.params.id].longURL = req.body.longURL;
+  urlDatabase[req.params.id].longURL = req.body.longURL;
   res.redirect("/urls");
 });
 
@@ -152,7 +156,7 @@ app.get("/u/:id", (req, res) => {
 });
 
 // add POST route to remove URLs
-app.post("/urls/:id/delete", (req, res) => {
+app.delete("/urls/:id", (req, res) => {
   const userID = req.session.user_id;
   // store URLs for this user in urls object
   const urls = urlsForUser(userID, urlDatabase);
